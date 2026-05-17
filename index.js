@@ -25,8 +25,13 @@ async function run() {
   try {
     await client.connect();
     const db = client.db('MediQueue')
-    const mediqueueCollection = db.collection('MediQueue_Data')
+    const tutorsCollection = db.collection('MediQueue_Data')
   
+
+    app.get('/tutors', async(req, res)=>{
+      const result = await tutorsCollection.find().toArray()
+      res.send(result)
+    })
 
 
 
