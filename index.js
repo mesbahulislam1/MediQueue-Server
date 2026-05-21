@@ -6,6 +6,7 @@ const app = express()
 const port = process.env.PORT
 const uri = process.env.MONGODB_URL
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { createRemoteJWKSet, jwtVerify } = require('jose-cjs')
 
 app.use(cors())
 app.use(express.json())
@@ -20,6 +21,26 @@ const client = new MongoClient(uri, {
 });
 
 
+const JWKS = createRemoteJWKSet(
+  new URL(`https://mediaueue-client.vercel.app/api/auth/jwks`)
+)
+const verifyToken= async(req, res, next)=> {
+      const authHeader = req?.headers?.authorization;
+      if (!authHeader) {
+        return res.status(401).json({message: 'Unauthorization'})
+      }
+      const token = authHeader.split(" ")[1]
+      if (!token) {
+        return res.status(401).json({message: 'Unauthorization'})
+      }
+
+      try {
+        const {payload} = await jwtVerify(token, JWKS)
+        next()
+      } catch (error) {
+        return res.status(403).json({message: 'Forbidden'})
+      }
+    }
 
 async function run() {
   try {
@@ -40,7 +61,6 @@ async function run() {
     })
     app.post('/tutors', async(req, res)=>{
       const newData = req.body;
-      console.log(newData)
       const result= await tutorsCollection.insertOne(newData)
       res.send(result)
     })
@@ -67,7 +87,7 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/booking/:id', async(req, res)=>{
+    app.get('/booking/:id',  async(req, res)=>{
       const {id} = req.params;
       const result = await bookingCollection.findOne({_id: new ObjectId(id)})
       res.send(result)
